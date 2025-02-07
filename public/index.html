@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - PoE</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 8px; }
+        th { background-color: #f4f4f4; }
+        button { margin: 10px; padding: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Leaderboard - Cmentarzysko x Kasztanowa</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Pozycja</th>
+                <th>Konto</th>
+                <th>Postać</th>
+                <th>Poziom</th>
+                <th>Klasa</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboard"></tbody>
+    </table>
+    <button id="prevPage">Poprzednia</button>
+    <button id="nextPage">Następna</button>
+
+    <script>
+        let offset = 0;
+        const limit = 50;
+
+        async function fetchLeaderboard() {
+            try {
+                const response = await fetch(`/leaderboard?offset=${offset}&limit=${limit}`);
+                const data = await response.json();
+                const tableBody = document.getElementById('leaderboard');
+                tableBody.innerHTML = '';
+                
+                data.entries.forEach(entry => {
+                    const row = `<tr>
+                        <td>${entry.rank}</td>
+                        <td>${entry.accountName}</td>
+                        <td>${entry.characterName}</td>
+                        <td>${entry.level}</td>
+                        <td>${entry.class}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('Błąd ładowania leaderboarda:', error);
+            }
+        }
+
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (offset >= limit) {
+                offset -= limit;
+                fetchLeaderboard();
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            offset += limit;
+            fetchLeaderboard();
+        });
+
+        fetchLeaderboard();
+    </script>
+</body>
+</html>
