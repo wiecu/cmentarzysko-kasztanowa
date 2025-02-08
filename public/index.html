@@ -33,7 +33,9 @@
     .Duelist, .Slayer, .Gladiator, .Champion { color: #f39c12; }  /* Pomarańczowy */
     .Ranger, .Deadeye, .Raider, .Pathfinder { color: #1abc9c; }  /* Turkusowy */
     .Scion, .Ascendant { color: #e74c3c; }  /* Czerwony */
-
+.dead {
+    color: gray !important;
+	}
         /* Tryb jasny (domyślnie ukryty) */
         .light-mode {
             background-color: white;
@@ -95,7 +97,7 @@
                     const isDead = entry.dead ? '💀 RIP' : '';
                     const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
 
-                    const row = `<tr class="${className}">
+                    const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
                         <td>${entry.rank}</td>
                         <td>${entry.accountName}</td>
                         <td>${entry.characterName}</td>
