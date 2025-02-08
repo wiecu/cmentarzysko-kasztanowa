@@ -4,11 +4,11 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const LEAGUE_NAME = 'Cmentarzysko x Kasztanowa (PL53351)';
 const POE_API_URL = 'https://www.pathofexile.com/api/ladders/';
-const FETCH_LIMIT = 50; // Maksymalny limit na jedno zapytanie
-const CACHE_DURATION = 3 * 60 * 1000; // 10 minut
+const FETCH_LIMIT = 200; // Maksymalny limit na jedno zapytanie
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minut
 
 app.use(cors());
 app.use(express.static('public'));
@@ -41,7 +41,7 @@ async function fetchFullLeaderboard() {
 
             allEntries = allEntries.concat(data.entries);
             offset += FETCH_LIMIT;
-			await new Promise(r => setTimeout(r, 2000)); // Ograniczenie liczby zapytań
+			await new Promise(r => setTimeout(r, 1000)); // Ograniczenie liczby zapytań
         } catch (error) {
             console.error("Błąd pobierania leaderboarda:", error);
             return [];
@@ -58,6 +58,7 @@ async function fetchFullLeaderboard() {
         dead: entry.dead !== undefined ? entry.dead : false,
     }));
 }
+
 
 app.get('/leaderboard', async (req, res) => {
     const currentTime = Date.now();
