@@ -5,15 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leaderboard - PoE</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 8px; }
-        th { background-color: #f4f4f4; }
-        button { margin: 10px; padding: 10px; cursor: pointer; }
+        /* Domyślny tryb ciemny */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 8px;
+        }
+        th {
+            background-color: #333;
+        }
+
+    /* Kolory czcionki dla klas głównych */
+    .Marauder, .Juggernaut, .Berserker, .Chieftain { color: #ff5733; }  /* Czerwony */
+    .Witch, .Necromancer, .Elementalist, .Occultist { color: #8e44ad; }  /* Fioletowy */
+    .Templar, .Inquisitor, .Hierophant, .Guardian { color: #3498db; }  /* Niebieski */
+    .Shadow, .Assassin, .Saboteur, .Trickster { color: #2ecc71; }  /* Zielony */
+    .Duelist, .Slayer, .Gladiator, .Champion { color: #f39c12; }  /* Pomarańczowy */
+    .Ranger, .Deadeye, .Raider, .Pathfinder { color: #1abc9c; }  /* Turkusowy */
+    .Scion, .Ascendant { color: #e74c3c; }  /* Czerwony */
+
+        /* Tryb jasny (domyślnie ukryty) */
+        .light-mode {
+            background-color: white;
+            color: black;
+        }
+        .light-mode table {
+            border-color: black;
+        }
+        .light-mode th {
+            background-color: #f4f4f4;
+        }
     </style>
 </head>
 <body>
     <h1>Leaderboard - Cmentarzysko x Kasztanowa</h1>
+
+    <button id="toggleDarkMode">☀️ Tryb jasny</button>
+    <input type="text" id="searchInput" placeholder="Wyszukaj postać..." />
+
     <table>
         <thead>
             <tr>
@@ -22,50 +61,68 @@
                 <th>Postać</th>
                 <th>Poziom</th>
                 <th>Klasa</th>
+                <th>Stan</th>
             </tr>
         </thead>
         <tbody id="leaderboard"></tbody>
     </table>
+    
     <button id="prevPage">Poprzednia</button>
     <button id="nextPage">Następna</button>
 
     <script>
         let offset = 0;
         const limit = 50;
+        let darkMode = true; // 🔥 Tryb ciemny domyślnie włączony
+
+        document.body.classList.toggle("light-mode", !darkMode);
+
+        document.getElementById("toggleDarkMode").addEventListener("click", () => {
+            darkMode = !darkMode;
+            document.body.classList.toggle("light-mode", !darkMode);
+            document.getElementById("toggleDarkMode").innerText = darkMode ? "☀️ Tryb jasny" : "🌙 Tryb ciemny";
+        });
 
         async function fetchLeaderboard() {
+            const search = document.getElementById("searchInput").value;
             try {
-                const response = await fetch(`/leaderboard?offset=${offset}&limit=${limit}`);
+                const response = await fetch(`/leaderboard?offset=${offset}&limit=${limit}&search=${encodeURIComponent(search)}`);
                 const data = await response.json();
-                const tableBody = document.getElementById('leaderboard');
+                const tableBody = document.getElementById("leaderboard");
                 tableBody.innerHTML = '';
-                
+
                 data.entries.forEach(entry => {
-                    const row = `<tr>
+                    const isDead = entry.dead ? '💀 RIP' : '';
+                    const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
+
+                    const row = `<tr class="${className}">
                         <td>${entry.rank}</td>
                         <td>${entry.accountName}</td>
                         <td>${entry.characterName}</td>
                         <td>${entry.level}</td>
                         <td>${entry.class}</td>
+                        <td>${isDead}</td>
                     </tr>`;
                     tableBody.innerHTML += row;
                 });
             } catch (error) {
-                console.error('Błąd ładowania leaderboarda:', error);
+                console.error("Błąd ładowania leaderboarda:", error);
             }
         }
 
-        document.getElementById('prevPage').addEventListener('click', () => {
+        document.getElementById("prevPage").addEventListener("click", () => {
             if (offset >= limit) {
                 offset -= limit;
                 fetchLeaderboard();
             }
         });
 
-        document.getElementById('nextPage').addEventListener('click', () => {
+        document.getElementById("nextPage").addEventListener("click", () => {
             offset += limit;
             fetchLeaderboard();
         });
+
+        document.getElementById("searchInput").addEventListener("input", fetchLeaderboard);
 
         fetchLeaderboard();
     </script>
