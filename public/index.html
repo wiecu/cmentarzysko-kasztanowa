@@ -74,6 +74,13 @@
     <button id="prevPage">Poprzednia</button>
     <button id="nextPage">Następna</button>
 
+    <div id="additionalStats">
+        <h3>Statystyki:</h3>
+        <p id="averageTop50"></p>
+        <p id="averageTop100"></p>
+        <p id="aliveAboveLevel10"></p>
+    </div>
+
     <script>
         let offset = 0;
         const limit = 50;
@@ -103,6 +110,7 @@
                 const data = await response.json();
                 allEntries = data.entries;  // Zapisujemy wszystkie dane
                 fetchLeaderboard();  // Wywołujemy funkcję do wyświetlenia danych
+                calculateAdditionalStats();  // Obliczamy dodatkowe statystyki
             } catch (error) {
                 console.error("Błąd ładowania leaderboarda:", error);
             }
@@ -140,6 +148,23 @@
             const totalCharacters = entries.length;
             const totalDead = entries.filter(entry => entry.dead).length;
             document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
+        }
+
+        function calculateAdditionalStats() {
+            const top50 = allEntries.slice(0, 50);
+            const top100 = allEntries.slice(0, 100);
+
+            // Średni poziom top 50
+            const averageTop50 = top50.reduce((acc, entry) => acc + entry.level, 0) / top50.length;
+            document.getElementById("averageTop50").innerText = `Średni poziom top 50: ${averageTop50.toFixed(2)}`;
+
+            // Średni poziom top 100
+            const averageTop100 = top100.reduce((acc, entry) => acc + entry.level, 0) / top100.length;
+            document.getElementById("averageTop100").innerText = `Średni poziom top 100: ${averageTop100.toFixed(2)}`;
+
+            // Ilość żywych postaci > 10 lvl
+            const aliveAboveLevel10 = allEntries.filter(entry => !entry.dead && entry.level > 10).length;
+            document.getElementById("aliveAboveLevel10").innerText = `Ilość żywych postaci >10 lvl: ${aliveAboveLevel10}`;
         }
 
         function fetchLeaderboard() {
