@@ -121,7 +121,13 @@ let offset = 0;  // Początkowa wartość offsetu
 let limit = 50;  // Limit wyników na stronę
 let totalResults = 5000;  // Całkowita liczba wyników
 let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
+        document.body.classList.toggle("light-mode", !darkMode);
 
+        document.getElementById("toggleDarkMode").addEventListener("click", () => {
+            darkMode = !darkMode;
+            document.body.classList.toggle("light-mode", !darkMode);
+            document.getElementById("toggleDarkMode").innerText = darkMode ? "☀️ Tryb jasny" : "🌙 Tryb ciemny";
+        });
 // Funkcja pobierająca wszystkie dane leaderboarda
 async function fetchAllEntries() {
     try {
