@@ -60,6 +60,17 @@
 		#footer p {
 			margin: 0;
 		}
+		
+		/* Styl dla komórki z XPH większym od 0 */
+        .xph-positive {
+            color: green;
+            font-weight: bold;
+        }
+
+        /* Styl dla komórki z XPH równym 0 */
+        .xph-zero {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -79,7 +90,8 @@
                 <th>Postać</th>
                 <th>Poziom</th>
                 <th>Klasa</th>
-		<th>Postęp</th>
+				<th>Postęp</th>
+				<th>XPH</th>
                 <th>Stan</th>
             </tr>
         </thead>
@@ -103,87 +115,86 @@
 	</div>
 
     <script>
-        let offset = 0;
-        const limit = 50;
-        const totalResults = 5000;  // Ogranicz liczbę wyników do pobrania
-        let darkMode = true;
-        let showOnlyDead = false;  
-        let allEntries = [];  // Zmienna na wszystkie dane leaderboarda
+// Zakładam, że te zmienne są zdefiniowane na poziomie globalnym
+let allEntries = [];  // Tablica przechowująca wszystkie dane leaderboarda
+let offset = 0;  // Początkowa wartość offsetu
+let limit = 50;  // Limit wyników na stronę
+let totalResults = 5000;  // Całkowita liczba wyników
+let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
 
-        document.body.classList.toggle("light-mode", !darkMode);
+// Funkcja pobierająca wszystkie dane leaderboarda
+async function fetchAllEntries() {
+    try {
+        const response = await fetch(`/leaderboard?limit=${totalResults}`);
+        const data = await response.json();
+        allEntries = data.entries;  // Zapisujemy wszystkie dane
+        fetchLeaderboard();  // Wywołujemy funkcję do wyświetlenia danych
+        calculateAdditionalStats();  // Obliczamy dodatkowe statystyki
+    } catch (error) {
+        console.error("Błąd ładowania leaderboarda:", error);
+    }
+}
 
-        document.getElementById("toggleDarkMode").addEventListener("click", () => {
-            darkMode = !darkMode;
-            document.body.classList.toggle("light-mode", !darkMode);
-            document.getElementById("toggleDarkMode").innerText = darkMode ? "☀️ Tryb jasny" : "🌙 Tryb ciemny";
-        });
+// Funkcja filtrująca dane
+function filterEntries() {
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    return allEntries.filter(entry => {
+        const matchesSearch = entry.characterName.toLowerCase().includes(search) || entry.accountName.toLowerCase().includes(search);
+        const matchesDeadOnly = !showOnlyDead || entry.dead;
+        return matchesSearch && matchesDeadOnly;
+    });
+}
 
-        document.getElementById("toggleDeadOnly").addEventListener("click", () => {
-            showOnlyDead = !showOnlyDead;
-            document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "🏆 Pokaż wszystkich" : "💀 Pokaż tylko martwych";
-            fetchLeaderboard();
-        });
+// Funkcja renderująca leaderboard
+function renderLeaderboard(entries) {
+    const tableBody = document.getElementById("leaderboard");
+    tableBody.innerHTML = '';
 
-        // Pobieramy wszystkie dane leaderboarda na raz
-        async function fetchAllEntries() {
-            try {
-                const response = await fetch(`/leaderboard?limit=${totalResults}`);
-                const data = await response.json();
-                allEntries = data.entries;  // Zapisujemy wszystkie dane
-                fetchLeaderboard();  // Wywołujemy funkcję do wyświetlenia danych
-                calculateAdditionalStats();  // Obliczamy dodatkowe statystyki
-            } catch (error) {
-                console.error("Błąd ładowania leaderboarda:", error);
-            }
+    // Paginacja na przefiltrowanych wynikach
+    const paginatedEntries = entries.slice(offset, offset + limit);
+
+    paginatedEntries.forEach(entry => {
+        const isDead = entry.dead ? '💀 RIP' : '';
+        const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
+        const progress = getExpForLevel(entry.level + 1) > getExpForLevel(entry.level)
+            ? ((entry.experience - getExpForLevel(entry.level)) / (getExpForLevel(entry.level + 1) - getExpForLevel(entry.level))) * 100
+            : 100; // 100% jeśli maksymalny poziom
+
+        // Formatowanie XPH
+        let xphClass = '';  // Zmienna na klasę do stylizacji XPH
+        let xphDisplay = entry.expPerHour;
+
+        if (entry.expPerHour && parseFloat(entry.expPerHour) > 0) {
+            // Jeśli XPH > 0, ustaw zieloną klasę
+            xphClass = 'xph-positive';
+        } else {
+            // Jeśli XPH == 0, nie pokazuj wartości
+            xphDisplay = '';
         }
 
-        function filterEntries() {
-            const search = document.getElementById("searchInput").value.toLowerCase();
-            return allEntries.filter(entry => {
-                const matchesSearch = entry.characterName.toLowerCase().includes(search) || entry.accountName.toLowerCase().includes(search);
-                const matchesDeadOnly = !showOnlyDead || entry.dead;
-                return matchesSearch && matchesDeadOnly;
-            });
-        }
+        const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
+            <td>${entry.rank}</td>
+            <td>${entry.accountName}</td>
+            <td>${entry.characterName}</td>
+            <td>${entry.level}</td>
+            <td>${entry.class}</td>
+            <td>
+                <div style="width: 100px; background: #333; border-radius: 5px; overflow: hidden;">
+                    <div style="width: ${progress}%; background: ${entry.dead ? 'gray' : 'limegreen'}; height: 10px;"></div>
+                </div>
+            </td>
+            <td class="${xphClass}">${xphDisplay}</td>
+            <td>${isDead}</td>
+        </tr>`;
+        tableBody.innerHTML += row;
+    });
 
-		function renderLeaderboard(entries) {
-			const tableBody = document.getElementById("leaderboard");
-			tableBody.innerHTML = '';
+    // Aktualizacja statystyk
+    const totalCharacters = entries.length;
+    const totalDead = entries.filter(entry => entry.dead).length;
+    document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
+}
 
-			// Paginacja na przefiltrowanych wynikach
-			const paginatedEntries = entries.slice(offset, offset + limit);
-
-			paginatedEntries.forEach(entry => {
-				const isDead = entry.dead ? '💀 RIP' : '';
-				const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
-					// Pobieramy wymagany EXP na obecny i następny poziom
-					const currentExp = entry.experience || 0;
-					const expCurrentLevel = getExpForLevel(entry.level);
-					const expNextLevel = getExpForLevel(entry.level + 1);
-					const progress = expNextLevel > expCurrentLevel 
-						? ((currentExp - expCurrentLevel) / (expNextLevel - expCurrentLevel)) * 100 
-						: 100; // 100% jeśli maksymalny poziom
-				const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
-						<td>${entry.rank}</td>
-						<td>${entry.accountName}</td>
-						<td>${entry.characterName}</td>
-						<td>${entry.level}</td>
-						<td>${entry.class}</td>
-						<td>
-							<div style="width: 100px; background: #333; border-radius: 5px; overflow: hidden;">
-								<div style="width: ${progress}%; background: ${entry.dead ? 'gray' : 'limegreen'}; height: 10px;"></div>
-							</div>
-						</td>
-						<td>${isDead}</td>
-					</tr>`;
-				tableBody.innerHTML += row;
-			});
-
-			// Aktualizacja statystyk
-			const totalCharacters = entries.length;
-			const totalDead = entries.filter(entry => entry.dead).length;
-			document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
-			}
 			function getExpForLevel(level) {
 				const experienceTable = {
 					1: 0, 2: 525, 3: 1760, 4: 3781, 5: 7184, 6: 12186, 7: 19324, 8: 29377, 9: 43181, 10: 61693,
@@ -254,6 +265,7 @@
 
         document.getElementById("searchInput").addEventListener("input", fetchLeaderboard);
         // Pobierz dane leaderboarda, gdy strona jest załadowana
+		
         fetchAllEntries();
     </script>
 </body>
