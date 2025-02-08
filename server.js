@@ -8,7 +8,8 @@ const PORT = process.env.PORT || 3000;
 const LEAGUE_NAME = 'Cmentarzysko x Kasztanowa (PL53351)';
 const POE_API_URL = 'https://www.pathofexile.com/api/ladders/';
 const FETCH_LIMIT = 200; // Maksymalny limit na jedno zapytanie
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minut
+const CACHE_DURATION = 3* 60 * 1000; // 3 minuty
+const CACHE_REFRESH_BEFORE = 1 * 60 * 1000; // Odświeżanie na minutę przed wygaśnięciem cache
 
 app.use(cors());
 app.use(express.static('public'));
@@ -16,6 +17,7 @@ app.use(express.static('public'));
 let cache = null;
 let lastFetchTime = 0;
 
+// Funkcja do pobrania leaderboarda
 async function fetchFullLeaderboard() {
     let allEntries = [];
     let offset = 0;
@@ -25,10 +27,10 @@ async function fetchFullLeaderboard() {
             const url = `${POE_API_URL}${encodeURIComponent(LEAGUE_NAME)}?offset=${offset}&limit=${FETCH_LIMIT}`;
             console.log("Wysyłam zapytanie do API:", url);
             const response = await fetch(url, {
-				headers: {
-					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-					'Accept': 'application/json'
-				},
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json'
+                },
             });
 
             if (!response.ok) {
@@ -41,7 +43,7 @@ async function fetchFullLeaderboard() {
 
             allEntries = allEntries.concat(data.entries);
             offset += FETCH_LIMIT;
-			await new Promise(r => setTimeout(r, 1000)); // Ograniczenie liczby zapytań
+            await new Promise(r => setTimeout(r, 1000)); // Ograniczenie liczby zapytań
         } catch (error) {
             console.error("Błąd pobierania leaderboarda:", error);
             return [];
@@ -59,15 +61,34 @@ async function fetchFullLeaderboard() {
     }));
 }
 
+// Funkcja do odświeżenia cache
+async function refreshCache() {
+    console.log('Odświeżam cache leaderboarda...');
+    cache = await fetchFullLeaderboard();
+    lastFetchTime = Date.now();
+    console.log('Cache zostało odświeżone.');
+}
 
-app.get('/leaderboard', async (req, res) => {
+// Uruchamiamy pobieranie leaderboarda przy starcie serwera
+refreshCache();
+
+// Ustawienie interwału do odświeżania cache przed wygaśnięciem
+setInterval(() => {
+    const timeLeft = lastFetchTime + CACHE_DURATION - Date.now();
+    if (timeLeft <= CACHE_REFRESH_BEFORE) {
+        refreshCache(); // Odświeżamy cache 1 minutę przed wygaśnięciem
+    }
+}, 60 * 1000); // Sprawdzamy co minutę
+
+app.get('/leaderboard', (req, res) => {
     const currentTime = Date.now();
 
+    // Zwracamy dane z cache jeśli są aktualne
     if (cache && (currentTime - lastFetchTime < CACHE_DURATION)) {
         console.log('Zwracam dane z cache');
     } else {
-        cache = await fetchFullLeaderboard();
-        lastFetchTime = currentTime;
+        // W razie potrzeby odświeżamy cache
+        refreshCache();
     }
 
     let offset = parseInt(req.query.offset, 10) || 0;
@@ -82,7 +103,6 @@ app.get('/leaderboard', async (req, res) => {
 
     res.json({ entries: paginatedData, total: filteredData.length });
 });
-
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
