@@ -41,7 +41,7 @@ async function fetchFullLeaderboard() {
 
             allEntries = allEntries.concat(data.entries);
             offset += FETCH_LIMIT;
-			await new Promise(r => setTimeout(r, 1000)); // Ograniczenie liczby zapytań
+			await new Promise(r => setTimeout(r, 2000)); // Ograniczenie liczby zapytań
         } catch (error) {
             console.error("Błąd pobierania leaderboarda:", error);
             return [];
