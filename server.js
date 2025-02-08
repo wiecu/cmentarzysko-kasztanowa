@@ -16,6 +16,19 @@ app.use(express.static('public'));
 
 let cache = null;
 let lastFetchTime = 0;
+let previousData = []; // Zmienna do przechowywania poprzednich danych (w tym doświadczenia)
+
+function formatNumber(num) {
+    if (num >= 1e9) { // Jeśli liczba >= 1 miliard
+        return (num / 1e9).toFixed(2) + 'B'; // "B" dla miliarda
+    } else if (num >= 1e6) { // Jeśli liczba >= 1 milion
+        return (num / 1e6).toFixed(2) + 'M'; // "M" dla miliona
+    } else if (num >= 1e3) { // Jeśli liczba >= 1000
+        return (num / 1e3).toFixed(2) + 'K'; // "K" dla tysiąca
+    } else {
+        return num.toString(); // Jeśli liczba jest mniejsza niż 1000, po prostu zwracamy ją jako tekst
+    }
+}
 
 // Funkcja do pobrania leaderboarda
 async function fetchFullLeaderboard() {
@@ -50,22 +63,38 @@ async function fetchFullLeaderboard() {
         }
     }
 
-    return allEntries.map(entry => ({
-        rank: entry.rank,
-        accountName: entry.account?.name || 'Nieznane',
-        characterName: entry.character?.name || 'Nieznane',
-        level: entry.character?.level || 'Nieznane',
-        class: entry.character?.class || 'Nieznane',
-        experience: entry.character?.experience || 0,
-        dead: entry.dead !== undefined ? entry.dead : false,
-    }));
-}
+    // Teraz zapisujemy poprzednią wartość doświadczenia, jeśli istnieje
+    const currentData = allEntries.map(entry => {
+        const currentExp = entry.character?.experience || 0;
+        const previousExp = previousData.find(prev => prev.rank === entry.rank)?.experience || currentExp;
+        const expGained = currentExp - previousExp; // Różnica w XP
 
+        // Jeśli XP zostało zdobyte, obliczamy XPH
+        const timeDiff = (Date.now() - lastFetchTime) / (1000 * 60 * 60); // Czas w godzinach od ostatniego odświeżenia
+        const expPerHour = timeDiff > 0 ? (expGained / timeDiff).toFixed(2) : 0;
+
+        return {
+            rank: entry.rank,
+            accountName: entry.account?.name || 'Nieznane',
+            characterName: entry.character?.name || 'Nieznane',
+            level: entry.character?.level || 'Nieznane',
+            class: entry.character?.class || 'Nieznane',
+            experience: currentExp,
+            expPerHour: formatNumber(expPerHour), // Formatowanie XPH
+            dead: entry.dead !== undefined ? entry.dead : false,
+        };
+    });
+
+    // Zapisujemy dane do previousData, by mieć je do porównań przy następnym odświeżeniu
+    previousData = currentData;
+
+    return currentData;
+}
 // Funkcja do odświeżenia cache
 async function refreshCache() {
     console.log('Odświeżam cache leaderboarda...');
     cache = await fetchFullLeaderboard();
-    lastFetchTime = Date.now();
+    lastFetchTime = Date.now(); // Aktualizujemy czas ostatniego pobrania
     console.log('Cache zostało odświeżone.');
 }
 
