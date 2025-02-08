@@ -87,17 +87,17 @@
             <tr>
                 <th>Pozycja</th>
                 <th>Konto</th>
-                <th>Postać</th>
+                <th>Postać (jest wraz z odnośnikiem do profilu)</th>
                 <th>Poziom</th>
                 <th>Klasa</th>
 				<th>Postęp</th>
-				<th>XPH</th>
+				<th>XPH*</th>
                 <th>Stan</th>
             </tr>
         </thead>
         <tbody id="leaderboard"></tbody>
     </table>
-    
+    <p>*XPH jest z ostatnich 3 minut bo co tyle się strona aktualizuje.</p>
 	<button id="firstPage">Pierwsza</button>
 	<button id="prevPage">Poprzednia</button>
 	<button id="nextPage">Następna</button>
@@ -187,7 +187,7 @@ function renderLeaderboard(entries) {
         const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
             <td>${entry.rank}</td>
             <td>${entry.accountName}</td>
-            <td>${entry.characterName}</td>
+			<td><a href="https://www.pathofexile.com/account/view-profile/${entry.accountName.replace('#', '%23')}/characters?characterName=${entry.characterName}" target="_blank" style="color: inherit; text-decoration: none;">${entry.characterName}</a></td>
             <td>${entry.level}</td>
             <td>${entry.class}</td>
             <td>
