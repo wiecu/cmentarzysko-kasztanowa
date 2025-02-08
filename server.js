@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const LEAGUE_NAME = 'Cmentarzysko x Kasztanowa (PL53351)';
 const POE_API_URL = 'https://www.pathofexile.com/api/ladders/';
 const FETCH_LIMIT = 50; // Maksymalny limit na jedno zapytanie
