@@ -85,11 +85,14 @@
         <tbody id="leaderboard"></tbody>
     </table>
     
-    <button id="prevPage">Poprzednia</button>
-    <button id="nextPage">Następna</button>
+	<button id="firstPage">Pierwsza</button>
+	<button id="prevPage">Poprzednia</button>
+	<button id="nextPage">Następna</button>
+	<button id="lastPage">Ostatnia</button>
+
 
     <div id="additionalStats">
-        <h3>Statystyki:</h3>
+        <h3>Statystyki dla KasztanTV:</h3>
         <p id="averageTop50"></p>
         <p id="averageTop100"></p>
         <p id="aliveAboveLevel10"></p>
@@ -142,30 +145,34 @@
             });
         }
 
-        function renderLeaderboard(entries) {
-            const tableBody = document.getElementById("leaderboard");
-            tableBody.innerHTML = '';
-            
-            entries.slice(offset, offset + limit).forEach(entry => {
-                const isDead = entry.dead ? '💀 RIP' : '';
-                const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
-                
-                const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
-                    <td>${entry.rank}</td>
-                    <td>${entry.accountName}</td>
-                    <td>${entry.characterName}</td>
-                    <td>${entry.level}</td>
-                    <td>${entry.class}</td>
-                    <td>${isDead}</td>
-                </tr>`;
-                tableBody.innerHTML += row;
-            });
+		function renderLeaderboard(entries) {
+			const tableBody = document.getElementById("leaderboard");
+			tableBody.innerHTML = '';
 
-            // Wyświetlamy statystyki
-            const totalCharacters = entries.length;
-            const totalDead = entries.filter(entry => entry.dead).length;
-            document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
-        }
+			// Paginacja na przefiltrowanych wynikach
+			const paginatedEntries = entries.slice(offset, offset + limit);
+
+			paginatedEntries.forEach(entry => {
+				const isDead = entry.dead ? '💀 RIP' : '';
+				const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
+
+				const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
+					<td>${entry.rank}</td>
+					<td>${entry.accountName}</td>
+					<td>${entry.characterName}</td>
+					<td>${entry.level}</td>
+					<td>${entry.class}</td>
+					<td>${isDead}</td>
+				</tr>`;
+				tableBody.innerHTML += row;
+			});
+
+			// Aktualizacja statystyk
+			const totalCharacters = entries.length;
+			const totalDead = entries.filter(entry => entry.dead).length;
+			document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
+		}
+
 
         function calculateAdditionalStats() {
             const top50 = allEntries.slice(0, 50);
@@ -184,10 +191,11 @@
             document.getElementById("aliveAboveLevel10").innerText = `Ilość żywych postaci >10 lvl: ${aliveAboveLevel10}`;
         }
 
-        function fetchLeaderboard() {
-            const filteredEntries = filterEntries();
-            renderLeaderboard(filteredEntries);
-        }
+		function fetchLeaderboard() {
+			const filteredEntries = filterEntries(); // Filtrujemy przed paginacją
+			offset = Math.min(offset, Math.max(0, filteredEntries.length - limit)); // Zapobiega pustym stronom
+			renderLeaderboard(filteredEntries);
+		}
 
         document.getElementById("prevPage").addEventListener("click", () => {
             if (offset >= limit) {
@@ -200,6 +208,18 @@
             offset += limit;
             fetchLeaderboard();
         });
+		
+		document.getElementById("firstPage").addEventListener("click", () => {
+			offset = 0;
+			fetchLeaderboard();
+		});
+
+		document.getElementById("lastPage").addEventListener("click", () => {
+			const filteredEntries = filterEntries();
+			offset = Math.max(0, filteredEntries.length - limit);
+			fetchLeaderboard();
+		});
+
 
         document.getElementById("searchInput").addEventListener("input", fetchLeaderboard);
         // Pobierz dane leaderboarda, gdy strona jest załadowana
