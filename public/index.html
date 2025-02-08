@@ -185,17 +185,8 @@
         });
 
         document.getElementById("searchInput").addEventListener("input", fetchLeaderboard);
-	window.onload = async function() {
-	    try {
-	        const response = await fetch('/leaderboard');
-	        const data = await response.json();
-	        allEntries = data.entries;
-	        fetchLeaderboard();
-	        calculateAdditionalStats();
-	    } catch (error) {
-	        console.error("Błąd ładowania leaderboarda:", error);
-	    }
-	};
+        // Pobierz dane leaderboarda, gdy strona jest załadowana
+        fetchAllEntries();
     </script>
 </body>
 </html>
