@@ -128,6 +128,11 @@ let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
             document.body.classList.toggle("light-mode", !darkMode);
             document.getElementById("toggleDarkMode").innerText = darkMode ? "☀️ Tryb jasny" : "🌙 Tryb ciemny";
         });
+        document.getElementById("toggleDeadOnly").addEventListener("click", () => {
+            showOnlyDead = !showOnlyDead;
+            document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "🏆 Pokaż wszystkich" : "💀 Pokaż tylko martwych";
+            fetchLeaderboard();
+        });
 // Funkcja pobierająca wszystkie dane leaderboarda
 async function fetchAllEntries() {
     try {
