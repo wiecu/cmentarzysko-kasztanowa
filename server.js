@@ -7,7 +7,7 @@ const app = express();
 const PORT = 3000;
 const LEAGUE_NAME = 'Cmentarzysko x Kasztanowa (PL53351)';
 const POE_API_URL = 'https://www.pathofexile.com/api/ladders/';
-const FETCH_LIMIT = 200; // Maksymalny limit na jedno zapytanie
+const FETCH_LIMIT = 50; // Maksymalny limit na jedno zapytanie
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minut
 
 app.use(cors());
