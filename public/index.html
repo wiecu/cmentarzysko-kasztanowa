@@ -5,40 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leaderboard - PoE</title>
     <style>
-        /* Domyślny tryb ciemny */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             background-color: #1a1a1a;
             color: white;
         }
-table {
-    font-size: 10px;
-    width: 50%;
-    margin: 10px auto;
-    border-collapse: collapse;
-}
-th, td {
-    padding: 5px;
-    border: 1px solid #444;
-}
-th {
-    background-color: #222;
-}
+		table {
+			font-size: 10px;
+			width: 50%;
+			margin: 10px auto;
+			border-collapse: collapse;
+		}
+		th, td {
+			padding: 5px;
+			border: 1px solid #444;
+		}
+		th {
+			background-color: #222;
+		}
 
+		/* Kolory dla klas */
+		.Marauder, .Juggernaut, .Berserker, .Chieftain { color: #ff5733; }
+		.Witch, .Necromancer, .Elementalist, .Occultist { color: #8e44ad; }
+		.Templar, .Inquisitor, .Hierophant, .Guardian { color: #3498db; }
+		.Shadow, .Assassin, .Saboteur, .Trickster { color: #2ecc71; }
+		.Duelist, .Slayer, .Gladiator, .Champion { color: #f39c12; }
+		.Ranger, .Deadeye, .Raider, .Pathfinder, .Warden { color: #1abc9c; }
+		.Scion, .Ascendant { color: #ffffff; }  
+		.dead { color: gray !important; }
 
-    /* Kolory czcionki dla klas głównych */
-    .Marauder, .Juggernaut, .Berserker, .Chieftain { color: #ff5733; }  /* Czerwony */
-    .Witch, .Necromancer, .Elementalist, .Occultist { color: #8e44ad; }  /* Fioletowy */
-    .Templar, .Inquisitor, .Hierophant, .Guardian { color: #3498db; }  /* Niebieski */
-    .Shadow, .Assassin, .Saboteur, .Trickster { color: #2ecc71; }  /* Zielony */
-    .Duelist, .Slayer, .Gladiator, .Champion { color: #f39c12; }  /* Pomarańczowy */
-    .Ranger, .Deadeye, .Raider, .Pathfinder, .Warden { color: #1abc9c; }  /* Turkusowy */
-    .Scion, .Ascendant { color: #00000; }  /* biały */
-.dead {
-    color: gray !important;
-	}
-        /* Tryb jasny (domyślnie ukryty) */
+        /* Tryb jasny */
         .light-mode {
             background-color: white;
             color: black;
@@ -55,7 +52,10 @@ th {
     <h1>Leaderboard - Cmentarzysko x Kasztanowa</h1>
 
     <button id="toggleDarkMode">☀️ Tryb jasny</button>
-    <input type="text" id="searchInput" placeholder="Wyszukaj postać..." />
+    <input type="text" id="searchInput" placeholder="Wyszukaj postać lub konto..." />
+    <button id="toggleDeadOnly">💀 Pokaż tylko martwych</button>
+
+    <p id="stats"></p> <!-- Informacje o liczbie postaci i martwych -->
 
     <table>
         <thead>
@@ -77,7 +77,10 @@ th {
     <script>
         let offset = 0;
         const limit = 50;
-        let darkMode = true; // 🔥 Tryb ciemny domyślnie włączony
+        const totalResults = 5000;  // Ogranicz liczbę wyników do pobrania
+        let darkMode = true;
+        let showOnlyDead = false;  
+        let allEntries = [];  // Zmienna na wszystkie dane leaderboarda
 
         document.body.classList.toggle("light-mode", !darkMode);
 
@@ -87,31 +90,61 @@ th {
             document.getElementById("toggleDarkMode").innerText = darkMode ? "☀️ Tryb jasny" : "🌙 Tryb ciemny";
         });
 
-        async function fetchLeaderboard() {
-            const search = document.getElementById("searchInput").value;
+        document.getElementById("toggleDeadOnly").addEventListener("click", () => {
+            showOnlyDead = !showOnlyDead;
+            document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "🏆 Pokaż wszystkich" : "💀 Pokaż tylko martwych";
+            fetchLeaderboard();
+        });
+
+        // Pobieramy wszystkie dane leaderboarda na raz
+        async function fetchAllEntries() {
             try {
-                const response = await fetch(`/leaderboard?offset=${offset}&limit=${limit}&search=${encodeURIComponent(search)}`);
+                const response = await fetch(`/leaderboard?limit=${totalResults}`);
                 const data = await response.json();
-                const tableBody = document.getElementById("leaderboard");
-                tableBody.innerHTML = '';
-
-                data.entries.forEach(entry => {
-                    const isDead = entry.dead ? '💀 RIP' : '';
-                    const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
-
-                    const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
-                        <td>${entry.rank}</td>
-                        <td>${entry.accountName}</td>
-                        <td>${entry.characterName}</td>
-                        <td>${entry.level}</td>
-                        <td>${entry.class}</td>
-                        <td>${isDead}</td>
-                    </tr>`;
-                    tableBody.innerHTML += row;
-                });
+                allEntries = data.entries;  // Zapisujemy wszystkie dane
+                fetchLeaderboard();  // Wywołujemy funkcję do wyświetlenia danych
             } catch (error) {
                 console.error("Błąd ładowania leaderboarda:", error);
             }
+        }
+
+        function filterEntries() {
+            const search = document.getElementById("searchInput").value.toLowerCase();
+            return allEntries.filter(entry => {
+                const matchesSearch = entry.characterName.toLowerCase().includes(search) || entry.accountName.toLowerCase().includes(search);
+                const matchesDeadOnly = !showOnlyDead || entry.dead;
+                return matchesSearch && matchesDeadOnly;
+            });
+        }
+
+        function renderLeaderboard(entries) {
+            const tableBody = document.getElementById("leaderboard");
+            tableBody.innerHTML = '';
+            
+            entries.slice(offset, offset + limit).forEach(entry => {
+                const isDead = entry.dead ? '💀 RIP' : '';
+                const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
+                
+                const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
+                    <td>${entry.rank}</td>
+                    <td>${entry.accountName}</td>
+                    <td>${entry.characterName}</td>
+                    <td>${entry.level}</td>
+                    <td>${entry.class}</td>
+                    <td>${isDead}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+
+            // Wyświetlamy statystyki
+            const totalCharacters = entries.length;
+            const totalDead = entries.filter(entry => entry.dead).length;
+            document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
+        }
+
+        function fetchLeaderboard() {
+            const filteredEntries = filterEntries();
+            renderLeaderboard(filteredEntries);
         }
 
         document.getElementById("prevPage").addEventListener("click", () => {
@@ -128,7 +161,8 @@ th {
 
         document.getElementById("searchInput").addEventListener("input", fetchLeaderboard);
 
-        fetchLeaderboard();
+        // Pobierz dane leaderboarda, gdy strona jest załadowana
+        fetchAllEntries();
     </script>
 </body>
 </html>
