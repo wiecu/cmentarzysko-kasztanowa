@@ -212,6 +212,9 @@ function renderLeaderboard(entries) {
         const isDead = entry.dead ? '💀 RIP' : '';
         const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
         const progress = getExpForLevel(entry.level + 1) > getExpForLevel(entry.level)
+            ? ((entry.previousExp - getExpForLevel(entry.level)) / (getExpForLevel(entry.level + 1) - getExpForLevel(entry.level))) * 100
+            : 100; // 100% jeśli maksymalny poziom
+		const expGainedGreen = getExpForLevel(entry.level + 1) > getExpForLevel(entry.level)
             ? ((entry.experience - getExpForLevel(entry.level)) / (getExpForLevel(entry.level + 1) - getExpForLevel(entry.level))) * 100
             : 100; // 100% jeśli maksymalny poziom
 
@@ -233,11 +236,12 @@ function renderLeaderboard(entries) {
 			<td><a href="https://www.pathofexile.com/account/view-profile/${entry.accountName.replace('#', '%23')}/characters?characterName=${entry.characterName}" target="_blank" style="color: inherit; text-decoration: none;">${entry.characterName}</a></td>
             <td>${entry.level}</td>
             <td>${entry.class}</td>
-            <td>
-                <div style="width: 100px; background: #333; border-radius: 5px; overflow: hidden;">
-                    <div style="width: ${progress}%; background: ${entry.dead ? 'gray' : 'limegreen'}; height: 10px;"></div>
-                </div>
-            </td>
+			<td>
+				<div style="width: 100px; background: #333; border-radius: 5px; overflow: hidden; display:flex; position: relative;">
+					<div style="width: ${expGainedGreen}%; background: limegreen; height: 10px;  top: 0; left: 0;"></div>
+					<div style="width: ${progress}%; background: gray; height: 10px; position: absolute; top: 0; left: 0;"></div>
+				</div>
+			</td>
             <td class="${xphClass}">${xphDisplay}</td>
             <td>${isDead}</td>
         </tr>`;
