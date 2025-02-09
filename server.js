@@ -2,6 +2,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,9 +12,19 @@ const FETCH_LIMIT = 200; // Maksymalny limit na jedno zapytanie
 const CACHE_DURATION = 3* 60 * 1000; // 3 minuty
 const CACHE_REFRESH_BEFORE = 1 * 60 * 1000; // Odświeżanie na minutę przed wygaśnięciem cache
 
+// Ochrona przed XSS, sniffingiem i clickjackingiem
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"] // 🔥 NIEBEZPIECZNE, ale działa
+        }
+    }
+}));
 app.use(cors());
 app.use(express.static('public'));
 
+let isFetching = false;
 let cache = null;
 let lastFetchTime = 0;
 let previousData = []; // Zmienna do przechowywania poprzednich danych (w tym doświadczenia)
@@ -82,6 +93,11 @@ async function fetchFullLeaderboard() {
             experience: currentExp,
             expPerHour: formatNumber(expPerHour), // Formatowanie XPH
             dead: entry.dead !== undefined ? entry.dead : false,
+            score: entry.score, // Dodanie score
+            progress: entry.progress, // Dodanie progress
+			depth: entry.depth, //deepest Delve depth completed
+			previousExp: previousExp,
+			expGained: expGained,
         };
     });
 
@@ -90,12 +106,18 @@ async function fetchFullLeaderboard() {
 
     return currentData;
 }
-// Funkcja do odświeżenia cache
+
 async function refreshCache() {
+    if (isFetching) return;
+    isFetching = true;
+
     console.log('Odświeżam cache leaderboarda...');
-    cache = await fetchFullLeaderboard();
-    lastFetchTime = Date.now(); // Aktualizujemy czas ostatniego pobrania
-    console.log('Cache zostało odświeżone.');
+    const newData = await fetchFullLeaderboard();
+    if (JSON.stringify(newData) !== JSON.stringify(cache)) {
+        cache = newData;
+        lastFetchTime = Date.now();
+    }
+    isFetching = false;
 }
 
 // Uruchamiamy pobieranie leaderboarda przy starcie serwera
@@ -130,8 +152,10 @@ app.get('/leaderboard', (req, res) => {
 
     const paginatedData = filteredData.slice(offset, offset + limit);
 
+    // Zwracamy dane, w tym score i progress
     res.json({ entries: paginatedData, total: filteredData.length });
 });
+
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
