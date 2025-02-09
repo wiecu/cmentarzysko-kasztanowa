@@ -78,6 +78,38 @@
 	
     <button id="toggleDarkMode">☀️ Tryb jasny</button>
     <input type="text" id="searchInput" placeholder="Wyszukaj postać lub konto..." />
+	<!-- Dodajemy selektor do wyboru klasy w HTML -->
+<select id="classFilter">
+    <option value="">Wybierz klasę</option>
+    <option value="Marauder">Marauder</option>
+    <option value="Juggernaut">Juggernaut</option>
+    <option value="Berserker">Berserker</option>
+    <option value="Chieftain">Chieftain</option>
+    <option value="Witch">Witch</option>
+    <option value="Necromancer">Necromancer</option>
+    <option value="Elementalist">Elementalist</option>
+    <option value="Occultist">Occultist</option>
+    <option value="Templar">Templar</option>
+    <option value="Inquisitor">Inquisitor</option>
+    <option value="Hierophant">Hierophant</option>
+    <option value="Guardian">Guardian</option>
+    <option value="Shadow">Shadow</option>
+    <option value="Assassin">Assassin</option>
+    <option value="Saboteur">Saboteur</option>
+    <option value="Trickster">Trickster</option>
+    <option value="Duelist">Duelist</option>
+    <option value="Slayer">Slayer</option>
+    <option value="Gladiator">Gladiator</option>
+    <option value="Champion">Champion</option>
+    <option value="Ranger">Ranger</option>
+    <option value="Deadeye">Deadeye</option>
+    <option value="Raider">Raider</option>
+    <option value="Pathfinder">Pathfinder</option>
+    <option value="Warden">Warden</option>
+    <option value="Scion">Scion</option>
+    <option value="Ascendant">Ascendant</option>
+</select>
+
     <button id="toggleDeadOnly">💀 Pokaż tylko martwych</button>
 
     <p id="stats"></p> <!-- Informacje o liczbie postaci i martwych -->
@@ -134,6 +166,11 @@ let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
             document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "🏆 Pokaż wszystkich" : "💀 Pokaż tylko martwych";
             fetchLeaderboard();
         });
+
+
+// Zaktualizuj filtr po zmianie wyboru klasy
+document.getElementById("classFilter").addEventListener("change", fetchLeaderboard);
+
 // Funkcja pobierająca wszystkie dane leaderboarda
 async function fetchAllEntries() {
     try {
@@ -150,12 +187,18 @@ async function fetchAllEntries() {
 // Funkcja filtrująca dane
 function filterEntries() {
     const search = document.getElementById("searchInput").value.toLowerCase();
+    const selectedClass = document.getElementById("classFilter").value; // Pobieramy wybraną klasę
     return allEntries.filter(entry => {
         const matchesSearch = entry.characterName.toLowerCase().includes(search) || entry.accountName.toLowerCase().includes(search);
+        const matchesClass = !selectedClass || entry.class === selectedClass;  // Filtrujemy po klasie
         const matchesDeadOnly = !showOnlyDead || entry.dead;
-        return matchesSearch && matchesDeadOnly;
+        return matchesSearch && matchesClass && matchesDeadOnly;
     });
 }
+
+// Zaktualizuj filtr po zmianie wyboru klasy
+document.getElementById("classFilter").addEventListener("change", fetchLeaderboard);
+
 
 // Funkcja renderująca leaderboard
 function renderLeaderboard(entries) {
