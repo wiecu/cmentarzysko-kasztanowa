@@ -164,7 +164,7 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Serwer działa na http://localhost:${PORT}`);
 });
-=======
+
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
