@@ -329,3 +329,335 @@ function renderLeaderboard(entries) {
     </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ladder - Cmentarzysko x Kasztanowa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: white;
+        }
+		table {
+			font-size: 12px;
+			width: 30%;
+			margin: 10px auto;
+			border-collapse: collapse;
+		}
+		th, td {
+			padding: 5px;
+			border: 1px solid #444;
+		}
+		th {
+			background-color: #222;
+		}
+
+		/* Kolory dla klas */
+		.Marauder, .Juggernaut, .Berserker, .Chieftain { color: #cf938d; }
+		.Witch, .Necromancer, .Elementalist, .Occultist { color: #8bbbfd; }
+		.Templar, .Inquisitor, .Hierophant, .Guardian { color: #b392b6; }
+		.Shadow, .Assassin, .Saboteur, .Trickster { color: #619c96; }
+		.Duelist, .Slayer, .Gladiator, .Champion { color: #c5a77d; }
+		.Ranger, .Deadeye, .Raider, .Pathfinder, .Warden { color: #81ac85; }
+		.Scion, .Ascendant { color: #ffffff; }  
+		.dead { color: gray !important; }
+
+        /* Tryb jasny */
+        .light-mode {
+            background-color: white;
+            color: black;
+        }
+        .light-mode table {
+            border-color: black;
+        }
+        .light-mode th {
+            background-color: #f4f4f4;
+        }
+		#footer {
+			bottom: 10px;
+			right: 10px;
+			color: white;
+			font-size: 12px;
+			background-color: rgba(0, 0, 0, 0.5);
+			padding: 5px;
+			border-radius: 5px;
+			box-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+		}
+
+		#footer p {
+			margin: 0;
+		}
+		
+		/* Styl dla komórki z XPH większym od 0 */
+        .xph-positive {
+            color: green;
+            font-weight: bold;
+        }
+
+        /* Styl dla komórki z XPH równym 0 */
+        .xph-zero {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ladder - Cmentarzysko x Kasztanowa</h1>
+	
+    <button id="toggleDarkMode">☀️ Tryb jasny</button>
+    <input type="text" id="searchInput" placeholder="Wyszukaj postać lub konto..." />
+	<!-- Dodajemy selektor do wyboru klasy w HTML -->
+<select id="classFilter">
+    <option value="">Wybierz klasę</option>
+    <option value="Marauder">Marauder</option>
+    <option value="Juggernaut">Juggernaut</option>
+    <option value="Berserker">Berserker</option>
+    <option value="Chieftain">Chieftain</option>
+    <option value="Witch">Witch</option>
+    <option value="Necromancer">Necromancer</option>
+    <option value="Elementalist">Elementalist</option>
+    <option value="Occultist">Occultist</option>
+    <option value="Templar">Templar</option>
+    <option value="Inquisitor">Inquisitor</option>
+    <option value="Hierophant">Hierophant</option>
+    <option value="Guardian">Guardian</option>
+    <option value="Shadow">Shadow</option>
+    <option value="Assassin">Assassin</option>
+    <option value="Saboteur">Saboteur</option>
+    <option value="Trickster">Trickster</option>
+    <option value="Duelist">Duelist</option>
+    <option value="Slayer">Slayer</option>
+    <option value="Gladiator">Gladiator</option>
+    <option value="Champion">Champion</option>
+    <option value="Ranger">Ranger</option>
+    <option value="Deadeye">Deadeye</option>
+    <option value="Raider">Raider</option>
+    <option value="Pathfinder">Pathfinder</option>
+    <option value="Warden">Warden</option>
+    <option value="Scion">Scion</option>
+    <option value="Ascendant">Ascendant</option>
+</select>
+
+    <button id="toggleDeadOnly">💀 Pokaż tylko martwych</button>
+
+    <p id="stats"></p> <!-- Informacje o liczbie postaci i martwych -->
+
+    <table>
+        <thead>
+            <tr>
+                <th>Pozycja</th>
+                <th>Konto</th>
+                <th>Postać (jest wraz z odnośnikiem do profilu)</th>
+                <th>Poziom</th>
+                <th>Klasa</th>
+				<th>Postęp</th>
+				<th>XPH*</th>
+                <th>Stan</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboard"></tbody>
+    </table>
+    <p>*XPH jest z ostatnich 3 minut bo co tyle się strona aktualizuje.</p>
+	<button id="firstPage">Pierwsza</button>
+	<button id="prevPage">Poprzednia</button>
+	<button id="nextPage">Następna</button>
+	<button id="lastPage">Ostatnia</button>
+
+
+    <div id="additionalStats">
+        <h3>Statystyki dla KasztanTV:</h3>
+        <p id="averageTop50"></p>
+        <p id="averageTop100"></p>
+        <p id="aliveAboveLevel10"></p>
+    </div>
+	<div id="footer">
+   	 <p>Strona stworzona przez wiecu z pomocą AI (GPT 4o)</p>
+	</div>
+
+    <script>
+// Zakładam, że te zmienne są zdefiniowane na poziomie globalnym
+let allEntries = [];  // Tablica przechowująca wszystkie dane leaderboarda
+let offset = 0;  // Początkowa wartość offsetu
+let limit = 50;  // Limit wyników na stronę
+let darkMode = true;
+let totalResults = 5000;  // Całkowita liczba wyników
+let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
+        document.body.classList.toggle("light-mode", !darkMode);
+
+        document.getElementById("toggleDarkMode").addEventListener("click", () => {
+            darkMode = !darkMode;
+            document.body.classList.toggle("light-mode", !darkMode);
+            document.getElementById("toggleDarkMode").innerText = darkMode ? "☀️ Tryb jasny" : "🌙 Tryb ciemny";
+        });
+        document.getElementById("toggleDeadOnly").addEventListener("click", () => {
+            showOnlyDead = !showOnlyDead;
+            document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "🏆 Pokaż wszystkich" : "💀 Pokaż tylko martwych";
+            fetchLeaderboard();
+        });
+
+
+// Zaktualizuj filtr po zmianie wyboru klasy
+document.getElementById("classFilter").addEventListener("change", fetchLeaderboard);
+
+// Funkcja pobierająca wszystkie dane leaderboarda
+async function fetchAllEntries() {
+    try {
+        const response = await fetch(`/leaderboard?limit=${totalResults}`);
+        const data = await response.json();
+        allEntries = data.entries;  // Zapisujemy wszystkie dane
+        fetchLeaderboard();  // Wywołujemy funkcję do wyświetlenia danych
+        calculateAdditionalStats();  // Obliczamy dodatkowe statystyki
+    } catch (error) {
+        console.error("Błąd ładowania leaderboarda:", error);
+    }
+}
+
+// Funkcja filtrująca dane
+function filterEntries() {
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    const selectedClass = document.getElementById("classFilter").value; // Pobieramy wybraną klasę
+    return allEntries.filter(entry => {
+        const matchesSearch = entry.characterName.toLowerCase().includes(search) || entry.accountName.toLowerCase().includes(search);
+        const matchesClass = !selectedClass || entry.class === selectedClass;  // Filtrujemy po klasie
+        const matchesDeadOnly = !showOnlyDead || entry.dead;
+        return matchesSearch && matchesClass && matchesDeadOnly;
+    });
+}
+
+// Zaktualizuj filtr po zmianie wyboru klasy
+document.getElementById("classFilter").addEventListener("change", fetchLeaderboard);
+
+
+// Funkcja renderująca leaderboard
+function renderLeaderboard(entries) {
+    const tableBody = document.getElementById("leaderboard");
+    tableBody.innerHTML = '';
+
+    // Paginacja na przefiltrowanych wynikach
+    const paginatedEntries = entries.slice(offset, offset + limit);
+
+    paginatedEntries.forEach(entry => {
+        const isDead = entry.dead ? '💀 RIP' : '';
+        const className = entry.class ? entry.class.replace(/\s+/g, '') : 'Unknown';
+        const progress = getExpForLevel(entry.level + 1) > getExpForLevel(entry.level)
+            ? ((entry.previousExp - getExpForLevel(entry.level)) / (getExpForLevel(entry.level + 1) - getExpForLevel(entry.level))) * 100
+            : 100; // 100% jeśli maksymalny poziom
+		const expGainedGreen = getExpForLevel(entry.level + 1) > getExpForLevel(entry.level)
+            ? ((entry.experience - getExpForLevel(entry.level)) / (getExpForLevel(entry.level + 1) - getExpForLevel(entry.level))) * 100
+            : 100; // 100% jeśli maksymalny poziom
+
+        // Formatowanie XPH
+        let xphClass = '';  // Zmienna na klasę do stylizacji XPH
+        let xphDisplay = entry.expPerHour;
+
+        if (entry.expPerHour && parseFloat(entry.expPerHour) > 0) {
+            // Jeśli XPH > 0, ustaw zieloną klasę
+            xphClass = 'xph-positive';
+        } else {
+            // Jeśli XPH == 0, nie pokazuj wartości
+            xphDisplay = '';
+        }
+
+        const row = `<tr class="${className} ${entry.dead ? 'dead' : ''}">
+            <td>${entry.rank}</td>
+            <td>${entry.accountName}</td>
+			<td><a href="https://www.pathofexile.com/account/view-profile/${entry.accountName.replace('#', '%23')}/characters?characterName=${entry.characterName}" target="_blank" style="color: inherit; text-decoration: none;">${entry.characterName}</a></td>
+            <td>${entry.level}</td>
+            <td>${entry.class}</td>
+			<td>
+				<div style="width: 100px; background: #333; border-radius: 5px; overflow: hidden; display:flex; position: relative;">
+					<div style="width: ${expGainedGreen}%; background: limegreen; height: 10px;  top: 0; left: 0;"></div>
+					<div style="width: ${progress}%; background: gray; height: 10px; position: absolute; top: 0; left: 0;"></div>
+				</div>
+			</td>
+            <td class="${xphClass}">${xphDisplay}</td>
+            <td>${isDead}</td>
+        </tr>`;
+        tableBody.innerHTML += row;
+    });
+
+    // Aktualizacja statystyk
+    const totalCharacters = entries.length;
+    const totalDead = entries.filter(entry => entry.dead).length;
+    document.getElementById("stats").innerText = `Liczba postaci: ${totalCharacters} | Liczba martwych: ${totalDead}`;
+}
+
+			function getExpForLevel(level) {
+				const experienceTable = {
+					1: 0, 2: 525, 3: 1760, 4: 3781, 5: 7184, 6: 12186, 7: 19324, 8: 29377, 9: 43181, 10: 61693,
+					11: 85990, 12: 117506, 13: 157384, 14: 207736, 15: 269997, 16: 346462, 17: 439268, 18: 551295, 19: 685171,
+					20: 843709, 21: 1030734, 22: 1249629, 23: 1504995, 24: 1800847, 25: 2142652, 26: 2535122, 27: 2984677,
+					28: 3496798, 29: 4080655, 30: 4742836, 31: 5490247, 32: 6334393, 33: 7283446, 34: 8384398, 35: 9541110,
+					36: 10874351, 37: 12361842, 38: 14018289, 39: 15859432, 40: 17905634, 41: 20171471, 42: 22679999,
+					43: 25456123, 44: 28517857, 45: 31897771, 46: 35621447, 47: 39721017, 48: 44225461, 49: 49176560,
+					50: 54607467, 51: 60565335, 52: 67094245, 53: 74247659, 54: 82075627, 55: 90631041, 56: 99984974,
+					57: 110197515, 58: 121340161, 59: 133497202, 60: 146749362, 61: 161191120, 62: 176922628, 63: 194049893,
+					64: 212684946, 65: 232956711, 66: 255001620, 67: 278952403, 68: 304972236, 69: 333233648, 70: 363906163,
+					71: 397194041, 72: 433312945, 73: 472476370, 74: 514937180, 75: 560961898, 76: 610815862, 77: 664824416,
+					78: 723298169, 79: 786612664, 80: 855129128, 81: 929261318, 82: 1009443795, 83: 1096169525,
+					84: 1189918242, 85: 1291270350, 86: 1400795257, 87: 1519130326, 88: 1646943474, 89: 1784977296,
+					90: 1934009687, 91: 2094900291, 92: 2268549086, 93: 2455921256, 94: 2658074992, 95: 2876116901,
+					96: 3111280300, 97: 3364828162, 98: 3638186694, 99: 3932818530, 100: 4250334444
+				};
+				return experienceTable[level] || 0;
+			}
+
+
+        function calculateAdditionalStats() {
+            const top50 = allEntries.slice(0, 50);
+            const top100 = allEntries.slice(0, 100);
+
+            // Średni poziom top 50
+            const averageTop50 = top50.reduce((acc, entry) => acc + entry.level, 0) / top50.length;
+            document.getElementById("averageTop50").innerText = `Średni poziom top 50: ${averageTop50.toFixed(2)}`;
+
+            // Średni poziom top 100
+            const averageTop100 = top100.reduce((acc, entry) => acc + entry.level, 0) / top100.length;
+            document.getElementById("averageTop100").innerText = `Średni poziom top 100: ${averageTop100.toFixed(2)}`;
+
+            // Ilość żywych postaci > 10 lvl
+            const aliveAboveLevel10 = allEntries.filter(entry => !entry.dead && entry.level > 10).length;
+            document.getElementById("aliveAboveLevel10").innerText = `Ilość żywych postaci >10 lvl: ${aliveAboveLevel10}`;
+        }
+
+		function fetchLeaderboard() {
+			const filteredEntries = filterEntries(); // Filtrujemy przed paginacją
+			offset = Math.min(offset, Math.max(0, filteredEntries.length - limit)); // Zapobiega pustym stronom
+			renderLeaderboard(filteredEntries);
+		}
+
+        document.getElementById("prevPage").addEventListener("click", () => {
+            if (offset >= limit) {
+                offset -= limit;
+                fetchLeaderboard();
+            }
+        });
+
+        document.getElementById("nextPage").addEventListener("click", () => {
+            offset += limit;
+            fetchLeaderboard();
+        });
+		
+		document.getElementById("firstPage").addEventListener("click", () => {
+			offset = 0;
+			fetchLeaderboard();
+		});
+
+		document.getElementById("lastPage").addEventListener("click", () => {
+			const filteredEntries = filterEntries();
+			offset = Math.max(0, filteredEntries.length - limit);
+			fetchLeaderboard();
+		});
+
+
+        document.getElementById("searchInput").addEventListener("input", fetchLeaderboard);
+        // Pobierz dane leaderboarda, gdy strona jest załadowana
+		
+        fetchAllEntries();
+    </script>
+</body>
+</html>
