@@ -2,7 +2,6 @@ const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
 const path = require('path');
-const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,34 +11,11 @@ const FETCH_LIMIT = 200; // Maksymalny limit na jedno zapytanie
 const CACHE_DURATION = 3* 60 * 1000; // 3 minuty
 const CACHE_REFRESH_BEFORE = 1 * 60 * 1000; // Odświeżanie na minutę przed wygaśnięciem cache
 
-// Ochrona przed XSS, sniffingiem i clickjackingiem
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"] // 🔥 NIEBEZPIECZNE, ale działa
-        }
-    }
-}));
 app.use(cors());
 app.use(express.static('public'));
 
-let isFetching = false;
 let cache = null;
 let lastFetchTime = 0;
-let previousData = []; // Zmienna do przechowywania poprzednich danych (w tym doświadczenia)
-
-function formatNumber(num) {
-    if (num >= 1e9) { // Jeśli liczba >= 1 miliard
-        return (num / 1e9).toFixed(2) + 'B'; // "B" dla miliarda
-    } else if (num >= 1e6) { // Jeśli liczba >= 1 milion
-        return (num / 1e6).toFixed(2) + 'M'; // "M" dla miliona
-    } else if (num >= 1e3) { // Jeśli liczba >= 1000
-        return (num / 1e3).toFixed(2) + 'K'; // "K" dla tysiąca
-    } else {
-        return num.toString(); // Jeśli liczba jest mniejsza niż 1000, po prostu zwracamy ją jako tekst
-    }
-}
 
 // Funkcja do pobrania leaderboarda
 async function fetchFullLeaderboard() {
@@ -74,50 +50,23 @@ async function fetchFullLeaderboard() {
         }
     }
 
-    // Teraz zapisujemy poprzednią wartość doświadczenia, jeśli istnieje
-    const currentData = allEntries.map(entry => {
-        const currentExp = entry.character?.experience || 0;
-        const previousExp = previousData.find(prev => prev.rank === entry.rank)?.experience || currentExp;
-        const expGained = currentExp - previousExp; // Różnica w XP
-
-        // Jeśli XP zostało zdobyte, obliczamy XPH
-        const timeDiff = (Date.now() - lastFetchTime) / (1000 * 60 * 60); // Czas w godzinach od ostatniego odświeżenia
-        const expPerHour = timeDiff > 0 ? (expGained / timeDiff).toFixed(2) : 0;
-
-        return {
-            rank: entry.rank,
-            accountName: entry.account?.name || 'Nieznane',
-            characterName: entry.character?.name || 'Nieznane',
-            level: entry.character?.level || 'Nieznane',
-            class: entry.character?.class || 'Nieznane',
-            experience: currentExp,
-            expPerHour: formatNumber(expPerHour), // Formatowanie XPH
-            dead: entry.dead !== undefined ? entry.dead : false,
-            score: entry.score, // Dodanie score
-            progress: entry.progress, // Dodanie progress
-			depth: entry.depth, //deepest Delve depth completed
-			previousExp: previousExp,
-			expGained: expGained,
-        };
-    });
-
-    // Zapisujemy dane do previousData, by mieć je do porównań przy następnym odświeżeniu
-    previousData = currentData;
-
-    return currentData;
+    return allEntries.map(entry => ({
+        rank: entry.rank,
+        accountName: entry.account?.name || 'Nieznane',
+        characterName: entry.character?.name || 'Nieznane',
+        level: entry.character?.level || 'Nieznane',
+        class: entry.character?.class || 'Nieznane',
+        experience: entry.character?.experience || 0,
+        dead: entry.dead !== undefined ? entry.dead : false,
+    }));
 }
 
+// Funkcja do odświeżenia cache
 async function refreshCache() {
-    if (isFetching) return;
-    isFetching = true;
-
     console.log('Odświeżam cache leaderboarda...');
-    const newData = await fetchFullLeaderboard();
-    if (JSON.stringify(newData) !== JSON.stringify(cache)) {
-        cache = newData;
-        lastFetchTime = Date.now();
-    }
-    isFetching = false;
+    cache = await fetchFullLeaderboard();
+    lastFetchTime = Date.now();
+    console.log('Cache zostało odświeżone.');
 }
 
 // Uruchamiamy pobieranie leaderboarda przy starcie serwera
@@ -152,10 +101,8 @@ app.get('/leaderboard', (req, res) => {
 
     const paginatedData = filteredData.slice(offset, offset + limit);
 
-    // Zwracamy dane, w tym score i progress
     res.json({ entries: paginatedData, total: filteredData.length });
 });
-
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
