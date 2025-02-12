@@ -110,6 +110,7 @@
     <option value="Ascendant">Ascendant</option>
 </select>
 
+	<button id="toggleAliveOnly">🏃‍➡️ Pokaż tylko żywych</button>
     <button id="toggleDeadOnly">💀 Pokaż tylko martwych</button>
 
     <p id="stats"></p> <!-- Informacje o liczbie postaci i martwych -->
@@ -154,6 +155,7 @@ let limit = 50;  // Limit wyników na stronę
 let darkMode = true;
 let totalResults = 5000;  // Całkowita liczba wyników
 let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
+let showOnlyAlive = false;
         document.body.classList.toggle("light-mode", !darkMode);
 
         document.getElementById("toggleDarkMode").addEventListener("click", () => {
@@ -163,7 +165,7 @@ let showOnlyDead = false;  // Flaga do filtrowania tylko martwych postaci
         });
         document.getElementById("toggleDeadOnly").addEventListener("click", () => {
             showOnlyDead = !showOnlyDead;
-            document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "🏆 Pokaż wszystkich" : "💀 Pokaż tylko martwych";
+            document.getElementById("toggleDeadOnly").innerText = showOnlyDead ? "Pokaż wszystkich" : "💀 Pokaż tylko martwych";
             fetchLeaderboard();
         });
 
@@ -183,6 +185,11 @@ async function fetchAllEntries() {
         console.error("Błąd ładowania leaderboarda:", error);
     }
 }
+document.getElementById("toggleAliveOnly").addEventListener("click", () => {
+    showOnlyAlive = !showOnlyAlive;  // Zmieniamy stan
+    document.getElementById("toggleAliveOnly").innerText = showOnlyAlive ? "Pokaż wszystkich" : "🟢 Pokaż tylko żywych";
+    fetchLeaderboard();  // Przeładuj leaderboard z nowym filtrem
+});
 
 // Funkcja filtrująca dane
 function filterEntries() {
@@ -192,7 +199,8 @@ function filterEntries() {
         const matchesSearch = entry.characterName.toLowerCase().includes(search) || entry.accountName.toLowerCase().includes(search);
         const matchesClass = !selectedClass || entry.class === selectedClass;  // Filtrujemy po klasie
         const matchesDeadOnly = !showOnlyDead || entry.dead;
-        return matchesSearch && matchesClass && matchesDeadOnly;
+        const matchesAliveOnly = !showOnlyAlive || !entry.dead;  // Filtrujemy tylko żywych, jeśli flagi showOnlyAlive jest true
+        return matchesSearch && matchesClass && matchesAliveOnly && matchesDeadOnly;
     });
 }
 
