@@ -134,27 +134,27 @@ setInterval(() => {
 app.get('/leaderboard', (req, res) => {
     const currentTime = Date.now();
 
-    // Zwracamy dane z cache jeśli są aktualne
-    if (cache && (currentTime - lastFetchTime < CACHE_DURATION)) {
-        console.log('Zwracam dane z cache');
-    } else {
-        // W razie potrzeby odświeżamy cache
+    // Jeśli cache jest pusty, wymuś jego odświeżenie
+    if (!cache || (currentTime - lastFetchTime >= CACHE_DURATION)) {
+        console.log('Cache jest pusty lub nieaktualny. Odświeżam...');
         refreshCache();
+        return res.status(503).json({ error: 'Cache jest odświeżany, spróbuj ponownie za chwilę.' });
     }
 
     let offset = parseInt(req.query.offset, 10) || 0;
     let limit = parseInt(req.query.limit, 10) || 50;
     let search = req.query.search ? req.query.search.toLowerCase() : "";
 
-    const filteredData = cache.filter(entry =>
+    // Upewnij się, że cache istnieje, zanim użyjesz filter()
+    const filteredData = Array.isArray(cache) ? cache.filter(entry =>
         entry.characterName.toLowerCase().includes(search)
-    );
+    ) : [];
 
     const paginatedData = filteredData.slice(offset, offset + limit);
 
-    // Zwracamy dane, w tym score i progress
     res.json({ entries: paginatedData, total: filteredData.length });
 });
+
 
 
 app.get('/', (req, res) => {
