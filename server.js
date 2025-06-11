@@ -6,7 +6,7 @@ const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const LEAGUE_NAME = 'Cmentarzysko x Kasztanowa (PL53351)';
+const LEAGUE_NAME = 'Cmentarzysko V x Sekrety Atlasu (PL71061)';
 const POE_API_URL = 'https://www.pathofexile.com/api/ladders/';
 const FETCH_LIMIT = 200; // Maksymalny limit na jedno zapytanie
 const CACHE_DURATION = 3* 60 * 1000; // 3 minuty
